@@ -168,7 +168,7 @@
       <p><b style="color:var(--ink)">1 · Move.</b> Tap a unit — the <b style="color:#7cb0ff">blue tiles</b> are everywhere it can go this turn. Tap one to move there. Forests/mountains cost more to enter but give cover.</p>
       <p><b style="color:var(--ink)">2 · Attack.</b> Enemies in range glow <b style="color:#ff8c80">red</b> — tap one to fire <b>without moving</b>, or move first and then attack. A <b style="color:var(--gold)">forecast</b> shows the damage dealt and taken, so every shot is a real decision. Out-range them to avoid the counter.</p>
       <p><b style="color:var(--ink)">3 · High ground.</b> Stand a Marksman or Artillery on a <b>Hill (▲)</b> or <b>Mountain (▲▲)</b> and their range <b>extends</b> — snipe from afar while staying out of reach. High ground also gives more cover and sight.</p>
-      <p><b style="color:var(--ink)">4 · Earn.</b> Buildings pay gold each turn: City +100, HQ +200, <b style="color:var(--gold)">Oil Rig +300</b>. Select a Rifleman/Scout — capturable buildings ring <b style="color:var(--gold)">gold ⚑</b>. Move onto one and pick <b>Capture</b> (it takes two turns). Gold builds units at your Factory.</p>
+      <p><b style="color:var(--ink)">4 · Earn &amp; repair.</b> Buildings pay gold each turn: City +100, HQ +200, <b style="color:var(--gold)">Oil Rig +300</b> — and any unit parked on a building you own <b style="color:#7ce08a">heals +2 HP</b>. Select a Rifleman/Scout — capturable buildings ring <b style="color:var(--gold)">gold ⚑</b>. Move on, pick <b>Capture</b>, and <b>hold the spot</b> until the bar fills (about two turns — leave and it resets). Gold builds units at your Factory.</p>
       <p><b style="color:var(--ink)">5 · End Turn.</b> When you're done, End Turn collects your income and lets the enemy move. The button glows when all your units have acted.</p>
       <p><b style="color:var(--ink)">Win:</b> capture the enemy <b>HQ</b> (move onto it, Capture twice) or destroy their whole army. <b>Strategy:</b> the player who controls the oil out-builds the other — fight for it.</p>
     </div>
@@ -367,10 +367,13 @@ function resetCaptureBy(id,except){for(let y=0;y<S.rows;y++)for(let x=0;x<S.cols
   if(t.capBy===id&&!(except&&except[0]===x&&except[1]===y)){t.capLeft=20;t.capBy=null;}}}
 function doCapture(u){const t=tileAt(u.x,u.y);resetCaptureBy(u.id,[u.x,u.y]);t.capBy=u.id;t.capLeft-=Math.max(1,u.hp);
   if(t.capLeft<=0){t.owner=u.owner;t.capLeft=20;t.capBy=null;popup(u.x,u.y,'CAPTURED','#9fe0a8');if(t.t==='hq')endGame(u.owner);}
-  else popup(u.x,u.y,t.capLeft+' left','#cfe0d0');u.acted=true;}
+  else popup(u.x,u.y,'HOLD '+Math.round((1-t.capLeft/20)*100)+'%','#f5c84b');u.acted=true;}
 
 /* turn flow */
-function startTurn(side){S.gold[side]+=income(side);for(const u of S.units)if(u.owner===side){u.acted=false;u.moved=false;}
+function startTurn(side){S.gold[side]+=income(side);
+  for(const u of S.units)if(u.owner===side){u.acted=false;u.moved=false;
+    const bt=tileAt(u.x,u.y);                                                       // repair: units on your buildings heal +2/turn
+    if(!u.loaded&&u.hp>0&&u.hp<10&&TT[bt.t].building&&bt.owner===side){u.hp=Math.min(10,u.hp+2);popup(u.x,u.y,'+2 ✚','#7ce08a');}}
   for(let y=0;y<S.rows;y++)for(let x=0;x<S.cols;x++){const t=tileAt(x,y);if(t.capBy!=null){const cu=unitById(t.capBy);if(!cu||cu.x!==x||cu.y!==y){t.capLeft=20;t.capBy=null;}}}
   checkEnd();}
 function endTurn(){if(S.over||S.busy||!isHuman(S.side))return;tutAdvance('end');deselect();hideBuild();const next=foe(S.side);if(next==='P')S.turn++;
@@ -449,7 +452,10 @@ function drawBuilding(x,y){
   else{ctx.fillStyle='#4a525d';roundRect(cx-13,by-18,26,18,2);ctx.fill();ctx.stroke();
     ctx.fillStyle=dk;ctx.beginPath();ctx.moveTo(cx-13,by-18);ctx.lineTo(cx,by-27);ctx.lineTo(cx+13,by-18);ctx.fill();
     ctx.fillStyle='rgba(255,255,255,.85)';ctx.fillRect(cx-4,by-11,8,11);}
-  if(t.capBy!=null&&t.capLeft<20){const w=24,frac=t.capLeft/20;ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(cx-w/2,Tp+3,w,4);ctx.fillStyle='#f5c84b';ctx.fillRect(cx-w/2,Tp+3,w*(1-frac),4);}
+  if(t.capBy!=null&&t.capLeft<20){const w=30,frac=t.capLeft/20;
+    ctx.fillStyle='rgba(0,0,0,.6)';roundRect(cx-w/2,Tp+2,w,5,2.5);ctx.fill();
+    ctx.fillStyle='#f5c84b';roundRect(cx-w/2+0.6,Tp+2.5,(w-1.2)*(1-frac),4,2);ctx.fill();
+    ctx.fillStyle='#f5c84b';ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('CAPTURING',cx,Tp-3);}
 }
 /* ---------- unit art ---------- */
 function drawUnit(u){
@@ -610,7 +616,7 @@ function openMenu(u){tutAdvance('move');const targets=(UNITS[u.type].indirect&&u
   S.sel={unit:u,phase:'menu',targets,field:S.sel.field,origin:S.sel.origin};
   const m=document.getElementById('menu');m.innerHTML='';
   if(targets.length){const b=mk('atk','⚔ Attack');b.onclick=()=>{S.sel.phase='target';hideMenu();};m.appendChild(b);}
-  if(canCap){const b=mk('cap','⚑ Capture ('+t.capLeft+')');b.onclick=()=>{S.busy=true;hideMenu();doCapture(u);S.busy=false;deselect();tutAdvance('act');};m.appendChild(b);}
+  if(canCap){const b=mk('cap','⚑ Capture '+TT[t.t].name);b.onclick=()=>{S.busy=true;hideMenu();doCapture(u);S.busy=false;deselect();tutAdvance('act');};m.appendChild(b);}
   if(canUnload){const b=mk('unl','⇲ Unload');b.onclick=()=>{S.sel.phase='unload';S.sel.dropTiles=adjacentDrops(u);hideMenu();};m.appendChild(b);}
   const w=mk('','✓ Wait');w.onclick=()=>{u.acted=true;hideMenu();deselect();tutAdvance('act');};m.appendChild(w);
   const c=mk('fc','✕ Cancel');c.onclick=cancelSel;m.appendChild(c);positionPop(m,u.x,u.y);showUnitCard(u);}
@@ -649,6 +655,7 @@ function showUnitCard(u){const card=document.getElementById('unitCard'),d=UNITS[
   card.style.display='flex';card.innerHTML='';const ic=document.createElement('canvas');ic.width=84;ic.height=84;const c=ic.getContext('2d');const _ctx=ctx;ctx=c;c.lineWidth=1.8;c.strokeStyle='#091009';c.lineJoin='round';miniUnit(c,u.type,u.owner,42,44);ctx=_ctx;
   const txt=document.createElement('div');txt.innerHTML='<div class="uname" style="color:'+ownerCol(u.owner)+'">'+d.name+'</div>'+
     '<div class="stats"><span>❤ <b>'+u.hp+'</b>/10</span><span>👟 <b>'+d.move+'</b></span><span>🎯 <b>'+r+'</b>'+(high?' <span style="color:#f5c84b">▲ high ground</span>':'')+'</span><span>👁 <b>'+(d.vis+heightOf(u.x,u.y))+'</b></span><span>'+TT[tileAt(u.x,u.y).t].name+' +'+terrainDef(u,u.x,u.y)+'</span>'+
+    (tileAt(u.x,u.y).capBy===u.id?'<span style="color:#f5c84b">⚑ holding — capture in progress</span>':'')+
     (d.cap?'<span>captures</span>':'')+(d.indirect?'<span>indirect</span>':'')+(d.carry?'<span>carries '+d.carry+'</span>':'')+'</div>';card.appendChild(ic);card.appendChild(txt);}
 function hideUnitCard(){document.getElementById('unitCard').style.display='none';}
 
@@ -709,7 +716,8 @@ function updateHint(){if(!S||S.over)return;
       if(s.fireFromHere&&s.fireFromHere.length)setHint('Tap a <b>red</b> enemy to attack from here (no move needed), or a blue tile to move.');
       else if(s.capTargets&&s.capTargets.length)setHint('Move onto a gold <b>⚑ building</b>, then Capture it for income.');
       else setHint('<b>Blue</b> = where it can go. Tap a tile to move. Right-click cancels.');}
-    else if(s.phase==='menu')setHint(s.targets&&s.targets.length?'Tap a <b>red</b> enemy to attack — or pick an action.':'Pick an action: Capture, Wait, or Cancel.');
+    else if(s.phase==='menu'){const u=s.unit,bt=tileAt(u.x,u.y);const cc=UNITS[u.type].cap&&TT[bt.t].building&&bt.owner!==u.owner;
+      setHint(cc?'<b>Capture</b> takes this building — keep the unit here over turns to <b>finish the hold</b>.':(s.targets&&s.targets.length?'Tap a <b>red</b> enemy to attack — or pick an action.':'Pick an action: Wait or Cancel.'));}
     else if(s.phase==='target')setHint('Tap a highlighted enemy. The bubble shows damage dealt vs. taken.');
     else if(s.phase==='unload')setHint('Tap a <b>green</b> tile to deploy the troops.');}}
 
