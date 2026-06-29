@@ -166,9 +166,10 @@
     <h1><small>Field Manual</small>How to Play</h1>
     <div style="text-align:left;max-width:560px;color:var(--muted);font-size:14px;line-height:1.55">
       <p><b style="color:var(--ink)">1 · Move.</b> Tap a unit — the <b style="color:#7cb0ff">blue tiles</b> are everywhere it can go this turn. Tap one to move there. Forests/mountains cost more to enter but give cover.</p>
-      <p><b style="color:var(--ink)">2 · Attack.</b> After moving, tap a <b style="color:#ff8c80">red enemy</b> in range (or pick Attack). A <b style="color:var(--gold)">forecast</b> shows the damage you'll deal and take back — so every shot is a real decision. Out-range them (Marksman, Artillery) to avoid the counter.</p>
-      <p><b style="color:var(--ink)">3 · Earn.</b> Every building you own pays gold each turn: City +100, HQ +200, <b style="color:var(--gold)">Oil Rig +300</b>. Send Riflemen/Scouts onto a building and pick <b>Capture</b> (twice) to take it. Gold builds new units at your Factory.</p>
-      <p><b style="color:var(--ink)">4 · End Turn.</b> When you're done, End Turn collects your income and lets the enemy move. The button glows when all your units have acted.</p>
+      <p><b style="color:var(--ink)">2 · Attack.</b> Enemies in range glow <b style="color:#ff8c80">red</b> — tap one to fire <b>without moving</b>, or move first and then attack. A <b style="color:var(--gold)">forecast</b> shows the damage dealt and taken, so every shot is a real decision. Out-range them to avoid the counter.</p>
+      <p><b style="color:var(--ink)">3 · High ground.</b> Stand a Marksman or Artillery on a <b>Hill (▲)</b> or <b>Mountain (▲▲)</b> and their range <b>extends</b> — snipe from afar while staying out of reach. High ground also gives more cover and sight.</p>
+      <p><b style="color:var(--ink)">4 · Earn.</b> Buildings pay gold each turn: City +100, HQ +200, <b style="color:var(--gold)">Oil Rig +300</b>. Select a Rifleman/Scout — capturable buildings ring <b style="color:var(--gold)">gold ⚑</b>. Move onto one and pick <b>Capture</b> (it takes two turns). Gold builds units at your Factory.</p>
+      <p><b style="color:var(--ink)">5 · End Turn.</b> When you're done, End Turn collects your income and lets the enemy move. The button glows when all your units have acted.</p>
       <p><b style="color:var(--ink)">Win:</b> capture the enemy <b>HQ</b> (move onto it, Capture twice) or destroy their whole army. <b>Strategy:</b> the player who controls the oil out-builds the other — fight for it.</p>
     </div>
     <button class="big" id="helpClose">Got it</button>
@@ -202,8 +203,8 @@ const TT = {
   plains:  {name:'Plains',  def:1, move:{foot:1,tread:1,air:1}},
   road:    {name:'Road',    def:0, move:{foot:1,tread:1,air:1}},
   forest:  {name:'Forest',  def:2, move:{foot:2,tread:3,air:1}},
-  hill:    {name:'Hill',    def:3, move:{foot:2,tread:3,air:1}},
-  mountain:{name:'Mountain',def:4, move:{foot:3,tread:99,air:1}},
+  hill:    {name:'Hill',    def:3, move:{foot:2,tread:3,air:1}, height:1},
+  mountain:{name:'Mountain',def:4, move:{foot:3,tread:99,air:1}, height:2},
   sea:     {name:'Water',   def:0, move:{foot:99,tread:99,air:1}},
   hq:      {name:'HQ',      def:4, move:{foot:1,tread:1,air:1}, building:true},
   factory: {name:'Factory', def:3, move:{foot:1,tread:1,air:1}, building:true},
@@ -234,28 +235,28 @@ const DMG = {
 /* ---------- maps ---------- */
 const MAPS = [
   { name:"Border Skirmish", blurb:"11×8 · a gentle first engagement",
-    grid:["Q G . . . ^ . . . c .",". . . f . . . o . . .",". . f . . . . . . . .",". . . . - - - . . . .",
-          ". . . . - - - . . f .",". . . . . . . . f . .",". o . . . ^ . . . . .",". c . . . . . . . F H"],
+    grid:["Q G . . . ^ . . . c .",". . . f . . . o . . .",". . f . . h . . . . .",". . . . - - - . . . .",
+          ". . . . - - - . . f .",". . . . . h . . f . .",". o . . . ^ . . . . .",". c . . . . . . . F H"],
     units:[{o:'P',t:'rifle',x:8,y:7},{o:'P',t:'scout',x:7,y:7},{o:'E',t:'rifle',x:2,y:0},{o:'E',t:'scout',x:3,y:0}] },
   { name:"Oil Fields", blurb:"13×9 · rich oil, fight to out-build",
-    grid:["Q G . . . ~ ~ . . . o c .",". E . . f . ~ . . . . . .",". . . f . . . . o . . f .",". o . . . - - - . . . f .",
-          ". . . . - - n - - . . . .",". f . . . - - - . . . o .",". f . . o . . . . f . . .",". . . . . . . ^ . f . C .",". c o . ~ . . . . . . F H"],
+    grid:["Q G . . . ~ ~ . . . o c .",". E . . f . ~ . . . . . .",". . . f . h . . o . . f .",". o . . . - - - . . . f .",
+          ". . . . - - n - - . . . .",". f . . . - - - . . . o .",". f . . o . h . . f . . .",". . . . . . . ^ . f . C .",". c o . ~ . . . . . . F H"],
     units:[{o:'P',t:'rifle',x:10,y:8},{o:'P',t:'scout',x:10,y:7},{o:'P',t:'tank',x:9,y:8},
            {o:'E',t:'rifle',x:2,y:0},{o:'E',t:'scout',x:3,y:0},{o:'E',t:'tank',x:2,y:1}] },
   { name:"River Crossing", blurb:"12×8 · bridges are everything",
-    grid:["Q G . . ^ . . . . o c .",". E . . ^ . ~ ~ . . . .",". . . f . . ~ . . n . .",". o f f - - - - . . . .",
-          ". . . . - - - - f f . .",". . n . . ~ . . f f o .",". . . . ~ ~ . ^ . . C .",". c . . . . . ^ . F H ."],
+    grid:["Q G . . ^ . . . . o c .",". E . . ^ . ~ ~ . . . .",". . . f h . ~ . . n . .",". o f f - - - - . . . .",
+          ". . h . - - - - f f . .",". . n . . ~ . . f f o .",". . . . ~ ~ . ^ . . C .",". c . . . . . ^ . F H ."],
     units:[{o:'P',t:'rifle',x:8,y:7},{o:'P',t:'scout',x:8,y:6},{o:'P',t:'tank',x:9,y:6},
            {o:'E',t:'rifle',x:2,y:0},{o:'E',t:'scout',x:3,y:0},{o:'E',t:'tank',x:2,y:1}] },
   { name:"Foxhole Flats", blurb:"14×10 · open ground, twin factories",
-    grid:["Q G . . f f . . . ~ ~ . c .",". E . . f . ^ . . ~ . o . .",". c . . . . ^ ^ . . . . . .",". . . o . - - - - . . . f .",
-          "f . . . - - n - - . . . f f","f f . . - - n - - . . o . f",". f . . . - - - - . . . . .",". . . . . . ^ ^ . . . . c .",
+    grid:["Q G . . f f . . . ~ ~ . c .",". E . . f . ^ . . ~ . o . .",". c . . . h ^ ^ . . . . . .",". . h o . - - - - . . . f .",
+          "f . . . - - n - - . . . f f","f f . . - - n - - . . o . f",". f . h . - - - - . . . . .",". . . . . . ^ ^ . h . . c .",
           ". . o . ~ . . ^ . f f . C .",". c . ~ ~ . . . f f . . F H"],
     units:[{o:'P',t:'rifle',x:11,y:9},{o:'P',t:'scout',x:10,y:9},{o:'P',t:'tank',x:11,y:8},{o:'P',t:'sniper',x:12,y:7},
            {o:'E',t:'rifle',x:2,y:0},{o:'E',t:'scout',x:3,y:0},{o:'E',t:'tank',x:2,y:1},{o:'E',t:'sniper',x:1,y:2}] },
   { name:"Last Stand", blurb:"12×9 · hold the line to the end",
     grid:["Q G . . . ^ ^ . . . c .",". E . . . . . . . . . .",". . . f . n . . f . . .",". o f . . . . . . . f o",
-          ". . . . . . . . . . . .",". . f . . ^ . . . f . .",". . . . . . . . . . . .",". c . . f . . f . . c .",". . o . . F H . . o . ."],
+          ". . . . . . . . . . . .",". . f . h ^ . . . f . .",". . . . . . . . . . . .",". c . h f . . f h . c .",". . o . . F H . . o . ."],
     units:[{o:'P',t:'tank',x:6,y:7},{o:'P',t:'rocket',x:7,y:7},{o:'P',t:'sniper',x:4,y:7},{o:'P',t:'rifle',x:8,y:8},
            {o:'E',t:'rifle',x:2,y:0},{o:'E',t:'scout',x:3,y:0},{o:'E',t:'tank',x:2,y:1},{o:'E',t:'rocket',x:8,y:1},{o:'E',t:'sniper',x:9,y:0}] },
 ];
@@ -307,6 +308,8 @@ const inB=(x,y)=>x>=0&&y>=0&&x<S.cols&&y<S.rows;
 const tileAt=(x,y)=>S.tiles[y][x];
 const manh=(ax,ay,bx,by)=>Math.abs(ax-bx)+Math.abs(ay-by);
 const ccx=x=>x*TILE+TILE/2, ccy=y=>y*TY+TY/2;     // tile centre in screen px (2.5D)
+const heightOf=(x,y)=>TT[tileAt(x,y).t].height||0;                                  // elevation level (hill 1, mountain 2)
+function effRange(u,x,y){const b=UNITS[u.type].range;return b[1]>=2?[b[0],b[1]+heightOf(x,y)]:b;}  // high ground = longer reach
 function unitAt(x,y){for(const u of S.units)if(u.hp>0&&!u.loaded&&u.x===x&&u.y===y)return u;return null;}
 function unitById(id){return S.units.find(u=>u.id===id&&u.hp>0)||null;}
 const clsKey=u=>UNITS[u.type].cls;
@@ -337,7 +340,7 @@ function distField(gx,gy,u){const D=Array.from({length:S.rows},()=>Array(S.cols)
 
 /* fog */
 function computeFog(side){const vis=new Set();const add=(x,y,r)=>{for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){if(Math.abs(dx)+Math.abs(dy)>r)continue;const nx=x+dx,ny=y+dy;if(inB(nx,ny))vis.add(key(nx,ny));}};
-  for(const u of S.units)if(u.owner===side&&!u.loaded&&u.hp>0)add(u.x,u.y,UNITS[u.type].vis);
+  for(const u of S.units)if(u.owner===side&&!u.loaded&&u.hp>0)add(u.x,u.y,UNITS[u.type].vis+heightOf(u.x,u.y));
   for(const [x,y] of buildingsOf(side))add(x,y,2);return vis;}
 function viewSide(){return S.mode==='hotseat'?S.side:'P';}
 
@@ -346,7 +349,7 @@ function predictDamage(atk,def){const base=DMG[atk.type][UNITS[def.type].cat]||0
   const raw=base/10*(atk.hp/10);const mit=1-0.1*terrainDef(def,def.x,def.y)*(def.hp/10);let d=raw*mit;d=(d>0&&d<1)?1:Math.round(d);
   return Math.max(0,Math.min(def.hp,d));}
 function canCounter(def,atk){if(UNITS[def.type].indirect)return false;if((DMG[def.type][UNITS[atk.type].cat]||0)<=0)return false;
-  const d=manh(def.x,def.y,atk.x,atk.y),r=UNITS[def.type].range;return d>=r[0]&&d<=r[1];}
+  const d=manh(def.x,def.y,atk.x,atk.y),r=effRange(def,def.x,def.y);return d>=r[0]&&d<=r[1];}
 function forecast(atk,def){const dmg=predictDamage(atk,def);const kill=dmg>=def.hp;let counter=0;
   if(!kill&&canCounter(def,atk))counter=predictDamage({...def,hp:def.hp-dmg},atk);return {dmg,kill,counter};}
 function resolveCombat(atk,def){
@@ -414,7 +417,8 @@ function drawTile(x,y){
   ctx.strokeStyle='rgba(6,12,8,.22)';ctx.lineWidth=1;ctx.strokeRect(L+.5,Tp+.5,TILE,TY);
   if(t.t==='forest'){tree(L+TILE*0.34,Tp+TY*0.62,9);tree(L+TILE*0.66,Tp+TY*0.42,8);}
   else if(t.t==='mountain'){peak(L,Tp);}
-  else if(t.t==='hill'){ctx.fillStyle='rgba(255,255,255,.08)';ell(L+TILE/2,Tp+TY/2,TILE*0.34,TY*0.22);}
+  else if(t.t==='hill'){ctx.fillStyle='rgba(0,0,0,.16)';ell(L+TILE/2,Tp+TY*0.66,TILE*0.36,TY*0.22);
+    ctx.fillStyle='#7e8c54';ell(L+TILE/2,Tp+TY*0.5,TILE*0.33,TY*0.27);ctx.fillStyle='rgba(255,255,255,.16)';ell(L+TILE/2-3,Tp+TY*0.42,TILE*0.15,TY*0.11);}
   else if(t.t==='road'){ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(L+TILE*0.40,Tp,TILE*0.20,TY);}
   else if(t.t==='sea'){ctx.strokeStyle='rgba(255,255,255,.22)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(L+TILE*0.38,Tp+TY*0.5,5,Math.PI*0.1,Math.PI*0.9);ctx.stroke();}
   if(TT[t.t].building)drawBuilding(x,y);
@@ -511,7 +515,10 @@ function drawOverlays(){
     for(let y=0;y<S.rows;y++)for(let x=0;x<S.cols;x++)if(!reach.has(key(x,y))){ctx.fillStyle='rgba(6,11,8,.28)';ctx.fillRect(x*TILE,y*TY,TILE,TY);}
     for(const [x,y] of s.stops){ctx.fillStyle=s.loadTiles&&s.loadTiles.has(key(x,y))?'rgba(245,200,75,.34)':`rgba(59,130,246,${pulse+0.2})`;ctx.fillRect(x*TILE,y*TY,TILE,TY);
       ctx.strokeStyle='rgba(124,176,255,.55)';ctx.lineWidth=1;ctx.strokeRect(x*TILE+1.5,y*TY+1.5,TILE-3,TY-3);}
-    for(const e of (s.fireFromHere||[])){ctx.fillStyle='rgba(239,68,68,.42)';ctx.fillRect(e.x*TILE,e.y*TY,TILE,TY);}
+    for(const e of (s.fireFromHere||[])){ctx.fillStyle='rgba(239,68,68,.42)';ctx.fillRect(e.x*TILE,e.y*TY,TILE,TY);
+      ctx.strokeStyle='#ff9c92';ctx.lineWidth=2;ctx.strokeRect(e.x*TILE+2,e.y*TY+2,TILE-4,TY-4);}
+    for(const [x,y] of (s.capTargets||[])){ctx.strokeStyle='#f5c84b';ctx.lineWidth=2.5;ctx.strokeRect(x*TILE+3,y*TY+3,TILE-6,TY-6);
+      ctx.fillStyle='#f5c84b';ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('⚑+'+(INCOME[tileAt(x,y).t]||0),ccx(x),y*TY+9);}
     // path preview to hovered tile
     if(S.hover&&reach.has(key(S.hover.x,S.hover.y))){const path=pathTo(s.unit,s.field,S.hover.x,S.hover.y);
       ctx.strokeStyle='#eaf3ff';ctx.lineWidth=3;ctx.lineJoin='round';ctx.setLineDash([2,5]);ctx.beginPath();
@@ -576,18 +583,19 @@ cv.addEventListener('mouseleave',()=>{if(S)S.hover=null;});
 cv.addEventListener('click',e=>{if(!S||S.busy||S.over||!isHuman(S.side))return;const c=eventCell(e);if(c)handleClick(c.x,c.y);});
 cv.addEventListener('contextmenu',e=>{e.preventDefault();if(S&&!S.busy)cancelSel();});
 
-function targetsFrom(u,x,y){const r=UNITS[u.type].range,out=[];if((r[1]||0)<1)return out;
+function targetsFrom(u,x,y){const r=effRange(u,x,y),out=[];if((r[1]||0)<1)return out;
   const fog=(S.fogOn&&isHuman(u.owner))?computeFog(u.owner):null;
   for(const e of S.units){if(e.owner===u.owner||e.hp<=0||e.loaded)continue;if(fog&&!fog.has(key(e.x,e.y)))continue;
     const d=manh(x,y,e.x,e.y);if(d>=r[0]&&d<=r[1]&&(DMG[u.type][UNITS[e.type].cat]||0)>0)out.push(e);}return out;}
 function selectUnit(u){const field=reachField(u);const {stops,loadTiles}=stoppable(u,field);
-  let fire=[];if(UNITS[u.type].indirect&&!u.moved)fire=targetsFrom(u,u.x,u.y);
-  S.sel={unit:u,field,stops,loadTiles,phase:'move',origin:[u.x,u.y],fireFromHere:fire};showUnitCard(u);tutAdvance('select');}
+  const fire=u.moved?[]:targetsFrom(u,u.x,u.y);                                    // any unit can fire in place
+  const caps=UNITS[u.type].cap?stops.filter(([x,y])=>isBuilding(x,y)&&tileAt(x,y).owner!==u.owner):[];
+  S.sel={unit:u,field,stops,loadTiles,phase:'move',origin:[u.x,u.y],fireFromHere:fire,capTargets:caps};showUnitCard(u);tutAdvance('select');}
 function handleClick(x,y){const s=S.sel,me=S.side;
   if(!s){const u=unitAt(x,y);if(u&&u.owner===me&&!u.acted){selectUnit(u);hideBuild();return;}
     const t=tileAt(x,y);if(t.t==='factory'&&t.owner===me&&!unitAt(x,y)){openBuild(x,y);return;}deselect();return;}
   if(s.phase==='move'){const u=s.unit;
-    if(UNITS[u.type].indirect&&!u.moved){const tgt=(s.fireFromHere||[]).find(e=>e.x===x&&e.y===y);if(tgt){commitAttack(u,tgt);return;}}
+    if(!u.moved){const tgt=(s.fireFromHere||[]).find(e=>e.x===x&&e.y===y);if(tgt){commitAttack(u,tgt);return;}}   // attack in place
     if(s.stops.some(p=>p[0]===x&&p[1]===y)){moveThenMenu(u,x,y);return;}
     const other=unitAt(x,y);if(other&&other.owner===me&&!other.acted){selectUnit(other);return;}deselect();return;}
   if(s.phase==='menu'){const tgt=s.targets&&s.targets.find(e=>e.x===x&&e.y===y);if(tgt){commitAttack(s.unit,tgt);return;}cancelSel();return;}
@@ -637,10 +645,10 @@ function miniUnit(c,type,owner,cx,cy){const dir=owner==='P'?-1:1,col=ownerCol(ow
   c.fillStyle='rgba(0,0,0,.25)';c.beginPath();c.ellipse(cx,cy+13,13,4,0,0,7);c.fill();
   switch(type){case 'rifle':case 'scout':soldier(cx,cy,dir,col,dk,lt,type);break;case 'rocket':rocketeer(cx,cy,dir,col,dk,lt);break;case 'sniper':marksman(cx,cy,dir,col,dk,lt);break;
     case 'tank':tank(cx,cy,dir,col,dk,lt);break;case 'arty':artillery(cx,cy,dir,col,dk,lt);break;case 'apc':apc(cx,cy,dir,col,dk,lt);break;case 'chopper':chopper(cx,cy,dir,col,dk,lt);break;}}
-function showUnitCard(u){const card=document.getElementById('unitCard'),d=UNITS[u.type];const r=d.range[1]<1?'—':(d.range[0]===d.range[1]?d.range[0]:d.range[0]+'-'+d.range[1]);
+function showUnitCard(u){const card=document.getElementById('unitCard'),d=UNITS[u.type];const er=effRange(u,u.x,u.y);const high=heightOf(u.x,u.y)>0&&d.range[1]>=2;const r=er[1]<1?'—':(er[0]===er[1]?er[0]:er[0]+'-'+er[1]);
   card.style.display='flex';card.innerHTML='';const ic=document.createElement('canvas');ic.width=84;ic.height=84;const c=ic.getContext('2d');const _ctx=ctx;ctx=c;c.lineWidth=1.8;c.strokeStyle='#091009';c.lineJoin='round';miniUnit(c,u.type,u.owner,42,44);ctx=_ctx;
   const txt=document.createElement('div');txt.innerHTML='<div class="uname" style="color:'+ownerCol(u.owner)+'">'+d.name+'</div>'+
-    '<div class="stats"><span>❤ <b>'+u.hp+'</b>/10</span><span>👟 <b>'+d.move+'</b></span><span>🎯 <b>'+r+'</b></span><span>👁 <b>'+d.vis+'</b></span><span>'+TT[tileAt(u.x,u.y).t].name+' +'+terrainDef(u,u.x,u.y)+'</span>'+
+    '<div class="stats"><span>❤ <b>'+u.hp+'</b>/10</span><span>👟 <b>'+d.move+'</b></span><span>🎯 <b>'+r+'</b>'+(high?' <span style="color:#f5c84b">▲ high ground</span>':'')+'</span><span>👁 <b>'+(d.vis+heightOf(u.x,u.y))+'</b></span><span>'+TT[tileAt(u.x,u.y).t].name+' +'+terrainDef(u,u.x,u.y)+'</span>'+
     (d.cap?'<span>captures</span>':'')+(d.indirect?'<span>indirect</span>':'')+(d.carry?'<span>carries '+d.carry+'</span>':'')+'</div>';card.appendChild(ic);card.appendChild(txt);}
 function hideUnitCard(){document.getElementById('unitCard').style.display='none';}
 
@@ -656,7 +664,7 @@ function aiProduce(){const facts=buildingsOf('E').filter(([x,y])=>tileAt(x,y).t=
     const u=UNITS[pick];S.gold.E-=u.cost;S.units.push({id:uid++,owner:'E',type:pick,x,y,rx:x,ry:y,hp:10,acted:true,moved:true,loaded:false,cargo:[]});popup(x,y,'+'+u.name,'#ffb4ae');}}
 const unitValue=u=>UNITS[u.type].cost/100;
 async function aiActUnit(u){const field=reachField(u);const {stops}=stoppable(u,field);const ind=UNITS[u.type].indirect,hasGun=(UNITS[u.type].range[1]||0)>=1;let best=null;
-  if(hasGun){const from=ind?[[u.x,u.y]]:stops;for(const [tx,ty] of from){const r=UNITS[u.type].range;
+  if(hasGun){const from=ind?[[u.x,u.y]]:stops;for(const [tx,ty] of from){const r=effRange(u,tx,ty);
     for(const e of S.units){if(e.owner==='E'||e.hp<=0||e.loaded)continue;const d=manh(tx,ty,e.x,e.y);if(d<r[0]||d>r[1])continue;if((DMG[u.type][UNITS[e.type].cat]||0)<=0)continue;
       const sx=u.x,sy=u.y;u.x=tx;u.y=ty;const dmg=predictDamage(u,e);const kill=dmg>=e.hp;let counter=0;if(!kill&&canCounter(e,u))counter=predictDamage({...e,hp:e.hp-dmg},u);u.x=sx;u.y=sy;
       const score=dmg*10+(kill?70:0)-counter*9+unitValue(e)*4+threatBonus(e);if(!best||score>best.score)best={tx,ty,e,score};}}}
@@ -697,7 +705,10 @@ function updateHint(){if(!S||S.over)return;
     if(!left){setHint('All units moved — <b>End Turn</b> to bank +'+income(S.side)+'g and let the enemy move.');endBtn.classList.add('ready');}
     else{setHint('Tap one of your units to select it.');endBtn.classList.remove('ready');}}
   else{endBtn.classList.remove('ready');
-    if(s.phase==='move')setHint('<b>Blue</b> = where it can go. Tap a tile to move. Right-click cancels.');
+    if(s.phase==='move'){
+      if(s.fireFromHere&&s.fireFromHere.length)setHint('Tap a <b>red</b> enemy to attack from here (no move needed), or a blue tile to move.');
+      else if(s.capTargets&&s.capTargets.length)setHint('Move onto a gold <b>⚑ building</b>, then Capture it for income.');
+      else setHint('<b>Blue</b> = where it can go. Tap a tile to move. Right-click cancels.');}
     else if(s.phase==='menu')setHint(s.targets&&s.targets.length?'Tap a <b>red</b> enemy to attack — or pick an action.':'Pick an action: Capture, Wait, or Cancel.');
     else if(s.phase==='target')setHint('Tap a highlighted enemy. The bubble shows damage dealt vs. taken.');
     else if(s.phase==='unload')setHint('Tap a <b>green</b> tile to deploy the troops.');}}
