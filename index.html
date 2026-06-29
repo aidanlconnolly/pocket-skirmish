@@ -36,6 +36,10 @@
   #menu button{padding:9px 12px;text-align:left;background:#1f3429;font-size:13px;}
   #menu button.atk{background:#7a2f2a;}#menu button.cap{background:#7a6420;}#menu button.unl{background:#2f5a6e;}
   #menu .fc{background:transparent;color:var(--muted);font-size:11px;padding:4px 8px;}
+  #tut{position:absolute;display:none;left:50%;top:8px;transform:translateX(-50%);z-index:7;align-items:center;gap:10px;
+    background:rgba(20,40,30,.97);border:1px solid var(--gold);border-radius:12px;padding:8px 12px;max-width:90%;box-shadow:0 8px 22px rgba(0,0,0,.55);}
+  #tut span{font-size:13px;color:var(--ink);line-height:1.3;}#tut b{color:var(--gold);}
+  #tut button{padding:5px 11px;font-size:11px;background:#2f5a3e;white-space:nowrap;}
   #build{position:absolute;display:none;z-index:6;background:rgba(10,18,14,.98);border:1px solid var(--line);border-radius:12px;padding:8px;box-shadow:0 12px 30px rgba(0,0,0,.6);width:212px;max-height:78vh;overflow:auto;}
   #build h4{margin:2px 4px 8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;}
   .buy{display:flex;align-items:center;gap:9px;width:100%;padding:7px 8px;margin-bottom:3px;background:#1c2f25;text-align:left;}
@@ -98,6 +102,7 @@
 
   <div id="boardWrap">
     <canvas id="cv"></canvas>
+    <div id="tut"></div>
     <div id="menu"></div>
     <div id="build"></div>
   </div>
@@ -365,7 +370,7 @@ function doCapture(u){const t=tileAt(u.x,u.y);resetCaptureBy(u.id,[u.x,u.y]);t.c
 function startTurn(side){S.gold[side]+=income(side);for(const u of S.units)if(u.owner===side){u.acted=false;u.moved=false;}
   for(let y=0;y<S.rows;y++)for(let x=0;x<S.cols;x++){const t=tileAt(x,y);if(t.capBy!=null){const cu=unitById(t.capBy);if(!cu||cu.x!==x||cu.y!==y){t.capLeft=20;t.capBy=null;}}}
   checkEnd();}
-function endTurn(){if(S.over||S.busy||!isHuman(S.side))return;deselect();hideBuild();const next=foe(S.side);if(next==='P')S.turn++;
+function endTurn(){if(S.over||S.busy||!isHuman(S.side))return;tutAdvance('end');deselect();hideBuild();const next=foe(S.side);if(next==='P')S.turn++;
   if(S.mode==='ai'&&next==='E'){S.side='E';S.busy=true;startTurn('E');updateHUD();setHint('Enemy is moving…');runAI();}
   else{S.side=next;startTurn(next);updateHUD();if(S.mode==='hotseat'){S.busy=true;showPass(next);}draw();}}
 function aiEndTurn(){S.side='P';S.turn++;startTurn('P');S.busy=false;updateHUD();draw();}
@@ -577,7 +582,7 @@ function targetsFrom(u,x,y){const r=UNITS[u.type].range,out=[];if((r[1]||0)<1)re
     const d=manh(x,y,e.x,e.y);if(d>=r[0]&&d<=r[1]&&(DMG[u.type][UNITS[e.type].cat]||0)>0)out.push(e);}return out;}
 function selectUnit(u){const field=reachField(u);const {stops,loadTiles}=stoppable(u,field);
   let fire=[];if(UNITS[u.type].indirect&&!u.moved)fire=targetsFrom(u,u.x,u.y);
-  S.sel={unit:u,field,stops,loadTiles,phase:'move',origin:[u.x,u.y],fireFromHere:fire};showUnitCard(u);}
+  S.sel={unit:u,field,stops,loadTiles,phase:'move',origin:[u.x,u.y],fireFromHere:fire};showUnitCard(u);tutAdvance('select');}
 function handleClick(x,y){const s=S.sel,me=S.side;
   if(!s){const u=unitAt(x,y);if(u&&u.owner===me&&!u.acted){selectUnit(u);hideBuild();return;}
     const t=tileAt(x,y);if(t.t==='factory'&&t.owner===me&&!unitAt(x,y)){openBuild(x,y);return;}deselect();return;}
@@ -592,20 +597,20 @@ async function moveThenMenu(u,x,y){const field=S.sel.field,moved=(x!==u.x||y!==u
   if(S.sel.loadTiles&&S.sel.loadTiles.has(key(x,y))){const apcU=unitAt(x,y);S.busy=true;hideMenu();const path=pathTo(u,field,x,y);path.pop();if(path.length>1)await animateMove(u,path);
     u.loaded=true;u.acted=true;apcU.cargo.push(u);S.busy=false;popup(apcU.x,apcU.y,'loaded','#cfe0d0');deselect();return;}
   const path=pathTo(u,field,x,y);S.busy=true;hideMenu();if(moved){await animateMove(u,path);u.moved=true;}S.busy=false;openMenu(u);}
-function openMenu(u){const targets=(UNITS[u.type].indirect&&u.moved)?[]:targetsFrom(u,u.x,u.y);const t=tileAt(u.x,u.y);
+function openMenu(u){tutAdvance('move');const targets=(UNITS[u.type].indirect&&u.moved)?[]:targetsFrom(u,u.x,u.y);const t=tileAt(u.x,u.y);
   const canCap=UNITS[u.type].cap&&TT[t.t].building&&t.owner!==u.owner;const canUnload=u.type==='apc'&&u.cargo.length>0&&adjacentDrops(u).length>0;
   S.sel={unit:u,phase:'menu',targets,field:S.sel.field,origin:S.sel.origin};
   const m=document.getElementById('menu');m.innerHTML='';
   if(targets.length){const b=mk('atk','⚔ Attack');b.onclick=()=>{S.sel.phase='target';hideMenu();};m.appendChild(b);}
-  if(canCap){const b=mk('cap','⚑ Capture ('+t.capLeft+')');b.onclick=()=>{S.busy=true;hideMenu();doCapture(u);S.busy=false;deselect();};m.appendChild(b);}
+  if(canCap){const b=mk('cap','⚑ Capture ('+t.capLeft+')');b.onclick=()=>{S.busy=true;hideMenu();doCapture(u);S.busy=false;deselect();tutAdvance('act');};m.appendChild(b);}
   if(canUnload){const b=mk('unl','⇲ Unload');b.onclick=()=>{S.sel.phase='unload';S.sel.dropTiles=adjacentDrops(u);hideMenu();};m.appendChild(b);}
-  const w=mk('','✓ Wait');w.onclick=()=>{u.acted=true;hideMenu();deselect();};m.appendChild(w);
+  const w=mk('','✓ Wait');w.onclick=()=>{u.acted=true;hideMenu();deselect();tutAdvance('act');};m.appendChild(w);
   const c=mk('fc','✕ Cancel');c.onclick=cancelSel;m.appendChild(c);positionPop(m,u.x,u.y);showUnitCard(u);}
 function mk(cls,txt){const b=document.createElement('button');if(cls)b.className=cls;b.textContent=txt;return b;}
 function adjacentDrops(apcU){const out=[];const cargo=apcU.cargo[apcU.cargo.length-1];if(!cargo)return out;
   for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const x=apcU.x+dx,y=apcU.y+dy;if(inB(x,y)&&!unitAt(x,y)&&moveCost(cargo,x,y)<99)out.push([x,y]);}return out;}
 function doUnload(apcU,x,y){const u=apcU.cargo.pop();u.loaded=false;u.x=x;u.y=y;u.rx=x;u.ry=y;u.acted=true;popup(x,y,'deployed','#cfe0d0');apcU.acted=true;hideMenu();deselect();}
-function commitAttack(u,tgt){S.busy=true;hideMenu();resolveCombat(u,tgt);setTimeout(()=>{S.busy=false;deselect();},120);}
+function commitAttack(u,tgt){S.busy=true;hideMenu();resolveCombat(u,tgt);tutAdvance('act');setTimeout(()=>{S.busy=false;deselect();},120);}
 function cancelSel(){const s=S.sel;if(!s){hideMenu();return;}const u=s.unit;
   if(s.origin&&(u.x!==s.origin[0]||u.y!==s.origin[1])&&!u.acted){u.x=s.origin[0];u.y=s.origin[1];u.rx=u.x;u.ry=u.y;u.moved=false;}hideMenu();deselect();}
 function deselect(){S.sel=null;hideMenu();hideUnitCard();}
@@ -654,13 +659,23 @@ async function aiActUnit(u){const field=reachField(u);const {stops}=stoppable(u,
   if(hasGun){const from=ind?[[u.x,u.y]]:stops;for(const [tx,ty] of from){const r=UNITS[u.type].range;
     for(const e of S.units){if(e.owner==='E'||e.hp<=0||e.loaded)continue;const d=manh(tx,ty,e.x,e.y);if(d<r[0]||d>r[1])continue;if((DMG[u.type][UNITS[e.type].cat]||0)<=0)continue;
       const sx=u.x,sy=u.y;u.x=tx;u.y=ty;const dmg=predictDamage(u,e);const kill=dmg>=e.hp;let counter=0;if(!kill&&canCounter(e,u))counter=predictDamage({...e,hp:e.hp-dmg},u);u.x=sx;u.y=sy;
-      const score=dmg*10+(kill?70:0)-counter*9+unitValue(e)*4;if(!best||score>best.score)best={tx,ty,e,score};}}}
+      const score=dmg*10+(kill?70:0)-counter*9+unitValue(e)*4+threatBonus(e);if(!best||score>best.score)best={tx,ty,e,score};}}}
   if(best&&best.score>S.ai.atkThresh){if(best.tx!==u.x||best.ty!==u.y){await animateMove(u,pathTo(u,field,best.tx,best.ty));await sleep(80);}u.moved=true;resolveCombat(u,best.e);await sleep(220);return;}
+  // wounded combat units pull back instead of trading badly
+  if(u.hp<=3&&!UNITS[u.type].cap&&enemiesNear(u,3)){const dest=retreatStep(u,stops);if(dest[0]!==u.x||dest[1]!==u.y)await animateMove(u,pathTo(u,field,dest[0],dest[1]));u.acted=true;return;}
   if(UNITS[u.type].cap){const here=tileAt(u.x,u.y);if(TT[here.t].building&&here.owner!=='E'){doCapture(u);return;}
-    const goal=nearestBuilding(u);if(goal){const dest=stepToward(u,goal,stops);if(dest[0]!==u.x||dest[1]!==u.y)await animateMove(u,pathTo(u,field,dest[0],dest[1]));
+    if(u.hp<=3&&enemiesNear(u,2)){const dest=retreatStep(u,stops);if(dest[0]!==u.x||dest[1]!==u.y)await animateMove(u,pathTo(u,field,dest[0],dest[1]));u.acted=true;return;}
+    const goal=bestObjective(u);if(goal){const dest=stepToward(u,goal,stops);if(dest[0]!==u.x||dest[1]!==u.y)await animateMove(u,pathTo(u,field,dest[0],dest[1]));
       const now=tileAt(u.x,u.y);if(TT[now.t].building&&now.owner!=='E')doCapture(u);else u.acted=true;return;}}
   const goal=nearestFoeOrHQ(u);if(goal){const dest=stepToward(u,goal,stops);if(dest[0]!==u.x||dest[1]!==u.y)await animateMove(u,pathTo(u,field,dest[0],dest[1]));}u.acted=true;}
-function nearestBuilding(u){let best=null,bd=Infinity;for(let y=0;y<S.rows;y++)for(let x=0;x<S.cols;x++){if(!isBuilding(x,y)||tileAt(x,y).owner==='E')continue;if(moveCost(u,x,y)>=99)continue;const D=distField(x,y,u)[u.y][u.x];if(D<bd){bd=D;best=[x,y];}}return best;}
+function threatBonus(e){let b=0;for(const [bx,by] of buildingsOf('E'))if(manh(e.x,e.y,bx,by)<=1)b+=tileAt(bx,by).t==='hq'?45:12;return b;}      // defend our own buildings
+function enemiesNear(u,r){return S.units.some(e=>e.owner!=='E'&&e.hp>0&&!e.loaded&&manh(u.x,u.y,e.x,e.y)<=r);}
+function retreatStep(u,stops){const en=S.units.filter(e=>e.owner!=='E'&&e.hp>0&&!e.loaded);let best=[u.x,u.y],bs=-Infinity;
+  for(const [x,y] of stops){let mind=Infinity;for(const e of en)mind=Math.min(mind,manh(x,y,e.x,e.y));
+    const sc=mind+TT[tileAt(x,y).t].def*0.5+((isBuilding(x,y)&&tileAt(x,y).owner==='E')?2:0);if(sc>bs){bs=sc;best=[x,y];}}return best;}
+function bestObjective(u){let best=null,bs=Infinity;for(let y=0;y<S.rows;y++)for(let x=0;x<S.cols;x++){
+  if(!isBuilding(x,y)||tileAt(x,y).owner==='E')continue;if(moveCost(u,x,y)>=99)continue;const D=distField(x,y,u)[u.y][u.x];if(!isFinite(D))continue;
+  const t=tileAt(x,y).t,val=t==='oil'?3:t==='hq'?4:t==='factory'?2:1;const sc=D-val*1.5;if(sc<bs){bs=sc;best=[x,y];}}return best;}
 function nearestFoeOrHQ(u){let best=null,bd=Infinity;for(const e of S.units){if(e.owner!=='E'&&e.hp>0&&!e.loaded){const D=manh(u.x,u.y,e.x,e.y);if(D<bd){bd=D;best=[e.x,e.y];}}}
   if(best)return best;for(let y=0;y<S.rows;y++)for(let x=0;x<S.cols;x++)if(tileAt(x,y).t==='hq'&&tileAt(x,y).owner==='P')return [x,y];return null;}
 function stepToward(u,goal,stops){const D=distField(goal[0],goal[1],u);let best=[u.x,u.y],bd=D[u.y][u.x];for(const [x,y] of stops){const d=D[y][x];if(d<bd){bd=d;best=[x,y];}}return best;}
@@ -689,7 +704,7 @@ function updateHint(){if(!S||S.over)return;
 
 let curMap=MAPS[0],curMode='ai',curDiff='normal',pendingMission=0;
 function gotoScreen(id){['homeScreen','roadmapScreen','briefScreen','setupScreen','endScreen','passScreen'].forEach(s=>document.getElementById(s).classList.remove('show'));if(id)document.getElementById(id).classList.add('show');}
-function startGame(mapDef,mode,diff,opts){curMap=mapDef;curMode=mode;curDiff=diff;S=createState(mapDef,mode,diff,opts);fitCanvas();gotoScreen(null);hideBuild();deselect();updateHUD();draw();
+function startGame(mapDef,mode,diff,opts){curMap=mapDef;curMode=mode;curDiff=diff;S=createState(mapDef,mode,diff,opts);fitCanvas();gotoScreen(null);hideBuild();deselect();updateHUD();startTut();draw();
   if(mode==='hotseat'){S.busy=true;showPass('P');}}
 function showPass(side){const sc=document.getElementById('passScreen');document.getElementById('passBadge').textContent=side==='P'?'B':'R';document.getElementById('passBadge').style.background=ownerCol(side);
   document.getElementById('passTitle').innerHTML='<small>Pass &amp; Play</small>'+(side==='P'?'Blue':'Red')+", you're up";sc.classList.add('show');}
@@ -715,6 +730,19 @@ function endBtnAdd(box,txt,cls,fn){const b=document.createElement('button');b.cl
 /* campaign progress */
 function getProgress(){return parseInt(localStorage.getItem('ps_progress')||'0')||0;}
 function setProgress(n){localStorage.setItem('ps_progress',Math.max(getProgress(),n));}
+/* first-time guided tutorial (Operation 1) — advances on what the player does */
+const TUT=[
+ {t:"👋 Welcome, Commander. Tap one of your <b>units</b> to select it.",trig:'select'},
+ {t:"<b>Blue tiles</b> show where it can move. Tap one to move there.",trig:'move'},
+ {t:"Now act — <b>Attack</b> a foe in range, <b>Capture</b> a building, or <b>Wait</b>.",trig:'act'},
+ {t:"All units done? Hit <b>End Turn</b> to bank gold and let the enemy move.",trig:'end'},
+ {t:"🎯 That's the whole loop. Capture the enemy <b>HQ</b> to win this operation — good luck!",trig:'done'},
+];
+function startTut(){const on=S&&S.mission&&S.missionIdx===0&&!localStorage.getItem('ps_tut_done');S.tut=on?{step:0}:null;renderTut();}
+function tutAdvance(trig){if(!S||!S.tut)return;if(TUT[S.tut.step]&&TUT[S.tut.step].trig===trig){S.tut.step=Math.min(S.tut.step+1,TUT.length-1);renderTut();}}
+function renderTut(){const el=document.getElementById('tut');if(!S||!S.tut){el.style.display='none';return;}el.style.display='flex';
+  const last=S.tut.step===TUT.length-1;el.innerHTML='<span>'+TUT[S.tut.step].t+'</span><button>'+(last?'Got it':'Skip')+'</button>';el.querySelector('button').onclick=endTut;}
+function endTut(){localStorage.setItem('ps_tut_done','1');if(S)S.tut=null;document.getElementById('tut').style.display='none';}
 function openRoadmap(){const prog=getProgress();const road=document.getElementById('road');road.innerHTML='';
   CAMPAIGN.forEach((m,i)=>{const node=document.createElement('div');const state=i<prog?'cleared':i===prog?'current':'locked';node.className='node '+state;
     const obj=m.obj==='survive'?'Survive '+m.turns+' turns':'Capture the HQ';
